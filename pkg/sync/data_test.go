@@ -1,0 +1,50 @@
+package sync
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"reflect"
+	"testing"
+	"time"
+
+	"github.com/sanity-io/litter"
+	"gotest.tools/assert"
+)
+
+func TestCreateDatabase(t *testing.T) {
+	dir := t.TempDir()
+	err := CreateDatastore(fmt.Sprintf("%s/sync.db", dir))
+	assert.NilError(t, err)
+}
+
+func TestRecords(t *testing.T) {
+	dir := t.TempDir()
+	path := fmt.Sprintf("%s/sync.db", dir)
+	err := CreateDatastore(path)
+	assert.NilError(t, err)
+
+	ds, err := OpenDatastore(path)
+	assert.NilError(t, err)
+	err = ds.CreateRecord(context.Background(), SyncRecord{
+		SourcePostID: "a",
+		TargetPostID: "b",
+	})
+	assert.NilError(t, err)
+	records, err := ds.ListRecords(context.Background())
+	assert.NilError(t, err)
+	litter.Dump(records)
+}
+
+func init() {
+	timeType := reflect.TypeOf(time.Time{})
+	litter.Config.DumpFunc = func(v reflect.Value, w io.Writer) bool {
+		if v.Type() != timeType {
+			return false
+		}
+
+		t := v.Interface().(time.Time)
+		fmt.Fprintf(w, `{/* %s */}`, t.Format(time.RFC3339))
+		return true
+	}
+}
