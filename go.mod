@@ -4,11 +4,15 @@ go 1.21.1
 
 require (
 	github.com/bluesky-social/indigo v0.0.0-20240110063124-630059eb1ce9
+	github.com/jmoiron/sqlx v1.3.5
 	github.com/mattn/go-mastodon v0.0.6
 	github.com/sanity-io/litter v1.5.5
 	github.com/sethvargo/go-envconfig v1.0.0
 	github.com/spf13/cobra v1.8.0
+	golang.org/x/net v0.18.0
 	gotest.tools v2.2.0+incompatible
+	modernc.org/sqlite v1.28.0
+	mvdan.cc/xurls/v2 v2.5.0
 )
 
 require (
@@ -51,7 +55,6 @@ require (
 	github.com/jbenet/goprocess v0.1.4 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.1 // indirect
@@ -98,7 +101,6 @@ require (
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/net v0.18.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
@@ -116,7 +118,6 @@ require (
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.7.2 // indirect
 	modernc.org/opt v0.1.3 // indirect
-	modernc.org/sqlite v1.28.0 // indirect
 	modernc.org/strutil v1.1.3 // indirect
 	modernc.org/token v1.0.1 // indirect
 )

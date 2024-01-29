@@ -67,6 +67,10 @@ func (d *Datastore) ListRecords(ctx context.Context) ([]SyncRecord, error) {
 	return records, nil
 }
 
+func (d *Datastore) GetRecord(ctx context.Context) (*SyncRecord, error) {
+	return nil, nil
+}
+
 func (d *Datastore) CreateRecord(ctx context.Context, record SyncRecord) error {
 	if record.AddedAt.IsZero() {
 		record.AddedAt = time.Now().UTC()
@@ -76,4 +80,8 @@ func (d *Datastore) CreateRecord(ctx context.Context, record SyncRecord) error {
 			VALUES (:added_at, :synced_at, :source_post_id, :source_post_url, :target_post_id, :target_post_url)
 		`, &record)
 	return err
+}
+
+func (d *Datastore) UpdateRecord(ctx context.Context, record SyncRecord) error {
+	return nil
 }

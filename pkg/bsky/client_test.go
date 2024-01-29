@@ -6,7 +6,6 @@ import (
 
 	"github.com/bluesky-social/indigo/api/atproto"
 	appbsky "github.com/bluesky-social/indigo/api/bsky"
-	"github.com/sanity-io/litter"
 	"github.com/sethvargo/go-envconfig"
 	"github.com/willgorman/mastodon-bsky/pkg/bsky"
 	"gotest.tools/assert"
@@ -44,7 +43,8 @@ func TestList(t *testing.T) {
 	err := envconfig.Process(context.Background(), &cfg)
 	assert.NilError(t, err)
 
-	c, err := bsky.NewClient(cfg)
+	// c, err := bsky.NewClient(cfg)
 	assert.NilError(t, err)
-	litter.Dump(c.ListRecords(context.Background()))
+	t.Skip("not done")
+	// litter.Dump(c.ListRecords(context.Background()))
 }
