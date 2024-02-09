@@ -12,19 +12,18 @@ import (
 
 const create string = `
 	CREATE TABLE IF NOT EXISTS sync_record (
-		id INTEGER NOT NULL PRIMARY KEY,
-		added_at DATETIME NOT NULL,
-		synced_at DATETIME NULL,
-		source_post_id TEXT,
+		source_post_id TEXT PRIMARY KEY,
 		source_post_url TEXT,
 
 		target_post_id TEXT,
 		target_post_url TEXT
+
+		added_at DATETIME NOT NULL,
+		synced_at DATETIME NULL,
 	);
 `
 
 type SyncRecord struct {
-	ID            int          `db:"id"`
 	AddedAt       time.Time    `db:"added_at"`
 	SyncedAt      sql.NullTime `db:"synced_at"`
 	SourcePostID  string       `db:"source_post_id"`
@@ -33,17 +32,17 @@ type SyncRecord struct {
 	TargetPostURL string       `db:"target_post_url"`
 }
 
-func CreateDatastore(path string) error {
+func CreateDatastore(path string) (*Datastore, error) {
 	db, err := sqlx.Open("sqlite", path)
 	if err != nil {
-		return fmt.Errorf("failed to open %s: %w", path, err)
+		return nil, fmt.Errorf("failed to open %s: %w", path, err)
 	}
 	_, err = db.Exec(create)
 	if err != nil {
-		return fmt.Errorf("failed to exec create: %w", err)
+		return nil, fmt.Errorf("failed to exec create: %w", err)
 	}
 
-	return nil
+	return &Datastore{db: db}, nil
 }
 
 type Datastore struct {

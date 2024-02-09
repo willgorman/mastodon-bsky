@@ -7,7 +7,6 @@ import (
 
 	comatproto "github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
-	appbsky "github.com/bluesky-social/indigo/api/bsky"
 	lexutil "github.com/bluesky-social/indigo/lex/util"
 	"github.com/bluesky-social/indigo/util"
 	"github.com/bluesky-social/indigo/util/cliutil"
@@ -55,10 +54,6 @@ func NewClient(cfg Config) (*Client, error) {
 	}, nil
 }
 
-type Post struct {
-	appbsky.FeedPost
-}
-
 type PostResult struct {
 	Cid string
 	Uri string
@@ -67,6 +62,15 @@ type PostResult struct {
 func (c *Client) Post(ctx context.Context, post Post) (*PostResult, error) {
 	if post.CreatedAt == "" {
 		post.CreatedAt = time.Now().UTC().Format(util.ISO8601)
+	}
+
+	// TODO: (willgorman) handle image upload?
+	for image, data := range post.images {
+		response, err := comatproto.RepoUploadBlob(ctx, c.rpcClient, data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to upload blob: %w", err)
+		}
+		image.Image = response.Blob
 	}
 
 	resp, err := comatproto.RepoCreateRecord(ctx, c.rpcClient, &comatproto.RepoCreateRecord_Input{

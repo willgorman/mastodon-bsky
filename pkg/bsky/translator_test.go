@@ -1,11 +1,14 @@
 package bsky
 
 import (
+	"io"
+	"net/http"
 	"testing"
 	"time"
 
 	appbsky "github.com/bluesky-social/indigo/api/bsky"
 	"github.com/mattn/go-mastodon"
+	"github.com/sanity-io/litter"
 	"gotest.tools/assert"
 )
 
@@ -442,6 +445,14 @@ func TestConvert(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Toot with tag",
+			toot: exampleTag,
+			want: &appbsky.FeedPost{
+				CreatedAt: time.Time{}.Format(time.RFC3339),
+				Text:      "post with #tag",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -453,4 +464,14 @@ func TestConvert(t *testing.T) {
 			assert.DeepEqual(t, got, tt.want)
 		})
 	}
+}
+
+func TestGetImg(t *testing.T) {
+	resp, err := http.Get("https://files.mastodon.social/cache/preview_cards/images/085/533/565/original/48d52fc9e782b425.jpeg")
+	assert.NilError(t, err)
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	assert.NilError(t, err)
+	litter.Dump(data)
 }

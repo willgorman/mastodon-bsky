@@ -14,14 +14,14 @@ import (
 
 func TestCreateDatabase(t *testing.T) {
 	dir := t.TempDir()
-	err := CreateDatastore(fmt.Sprintf("%s/sync.db", dir))
+	_, err := CreateDatastore(fmt.Sprintf("%s/sync.db", dir))
 	assert.NilError(t, err)
 }
 
 func TestRecords(t *testing.T) {
 	dir := t.TempDir()
 	path := fmt.Sprintf("%s/sync.db", dir)
-	err := CreateDatastore(path)
+	_, err := CreateDatastore(path)
 	assert.NilError(t, err)
 
 	ds, err := OpenDatastore(path)

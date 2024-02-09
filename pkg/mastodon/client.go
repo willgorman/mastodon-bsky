@@ -20,6 +20,8 @@ type Client struct {
 	user *mastodon.Account
 }
 
+type Status mastodon.Status
+
 func NewClient(ctx context.Context, cfg Config) (*Client, error) {
 	c := mastodon.NewClient(&mastodon.Config{
 		Server:       cfg.Server,

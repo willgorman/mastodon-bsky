@@ -3,6 +3,9 @@ package bsky
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"time"
 
@@ -17,28 +20,78 @@ const (
 	FeedPost           = "app.bsky.feed.post"
 )
 
+type Card struct {
+	appbsky.EmbedExternal_External
+	ThumbImg io.ReadCloser
+}
+type Post struct {
+	appbsky.FeedPost
+	images map[*appbsky.EmbedImages_Image]io.ReadCloser
+	card   Card
+}
+
 // translation
 
 // TODO: (willgorman) need some config about what not to convert
 // mastodon replies for example
+// TODO: (willgorman) change return type, add image/embed data to the struct
+func Convert(toot *mastodon.Status) (*Post, error) {
+	result := &Post{}
+	tootText := textContent(toot.Content)
 
-func Convert(toot *mastodon.Status) (*appbsky.FeedPost, error) {
+	// TODO: (willgorman) what about Status > 300 chars?  Split into multiple FeedPost?
+	// Skip it? Truncate?  Make a link back to the original mastodon post?
+	result.FeedPost = appbsky.FeedPost{
+		CreatedAt: toot.CreatedAt.Format(time.RFC3339),
+		Facets:    getLinkFacets(tootText),
+		Text:      tootText,
+	}
 	// TODO: (willgorman) in order to take a mastodon image to an embedded bluesky
 	// image we have to first upload the image data and get back a ref link
 	// to include in the FeedPost: https://atproto.com/blog/create-post#images-embeds
 	if len(toot.MediaAttachments) > 0 {
 		return nil, errors.New("images not handled yet")
 	}
+	for _, attachment := range toot.MediaAttachments {
+		if attachment.Type != "image" {
+			continue
+		}
+		if result.images == nil {
+			result.images = make(map[*appbsky.EmbedImages_Image]io.ReadCloser)
+		}
+		resp, err := http.Get(attachment.URL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get image from %s: %w", attachment.URL, err)
+		}
+		result.images[&appbsky.EmbedImages_Image{
+			Alt: attachment.Description,
+			AspectRatio: &appbsky.EmbedImages_AspectRatio{
+				Height: attachment.Meta.Original.Height,
+				Width:  attachment.Meta.Original.Width,
+			},
+		}] = resp.Body
+	}
+	for image := range result.images {
+		result.Embed.EmbedImages.Images = append(result.Embed.EmbedImages.Images, image)
+	}
 
-	tootText := textContent(toot.Content)
+	if toot.Card != nil {
+		result.card = Card{
+			EmbedExternal_External: appbsky.EmbedExternal_External{
+				Description: toot.Card.Description,
+				Title:       toot.Card.Title,
+				Uri:         toot.Card.URL,
+			},
+		}
+		res, err := http.Get(toot.Card.Image)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch card image from %s: %w", toot.Card.Image, err)
+		}
+		result.card.ThumbImg = res.Body
+		result.Embed.EmbedExternal.External = &result.card.EmbedExternal_External
+	}
 
-	// TODO: (willgorman) what about Status > 300 chars?  Split into multiple FeedPost?
-	// Skip it? Truncate?  Make a link back to the original mastodon post?
-	return &appbsky.FeedPost{
-		CreatedAt: toot.CreatedAt.Format(time.RFC3339),
-		Facets:    getLinkFacets(tootText),
-		Text:      tootText,
-	}, nil
+	return result, nil
 }
 
 func textContent(s string) string {
