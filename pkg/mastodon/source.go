@@ -1,26 +1,70 @@
 package mastodon
 
 import (
+	"context"
 	"time"
 
 	"github.com/mattn/go-mastodon"
 )
 
-type source struct{}
+type source struct {
+	client   Client
+	filters  any
+	startID  string
+	interval time.Duration
+	statusCh chan Status
+	errorCh  chan error
+}
 
 // TODO: (willgorman) define filters
-func NewSource(client Client, filters any) source {
-	return source{}
+func NewSource(client Client, startID string, interval time.Duration, filters any) *source {
+	return &source{
+		client:  client,
+		filters: filters,
+	}
 }
 
-func (s *source) Open() (<-chan Status, <-chan error) {
+func (s *source) Open(ctx context.Context) (<-chan Status, <-chan error) {
 	// FIXME: (willgorman) impl
-	return nil, nil
+	s.statusCh = make(chan Status)
+	s.errorCh = make(chan error)
+	go s.streamStatus(ctx)
+
+	return s.statusCh, s.errorCh
 }
 
-func (s *source) Close() error {
-	// FIXME: (willgorman) impl
-	return nil
+func (s *source) streamStatus(ctx context.Context) {
+	var statuses []*mastodon.Status
+	var err error
+	tick := time.NewTicker(s.interval)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			close(s.errorCh)
+			close(s.statusCh)
+			return
+		case <-tick.C:
+			if len(statuses) == 0 {
+				statuses, err = s.client.GetAccountStatuses(context.Background(), s.client.user.ID, &mastodon.Pagination{
+					SinceID: mastodon.ID(s.startID),
+				})
+				if err != nil {
+					s.errorCh <- err
+				}
+			}
+			for _, status := range statuses {
+				select {
+				case <-ctx.Done():
+					close(s.statusCh)
+					close(s.errorCh)
+					return
+				case s.statusCh <- Status(*status):
+				}
+			}
+			s.startID = string(statuses[len(statuses)-1].ID)
+		}
+	}
 }
 
 type fakeSource struct {
@@ -94,11 +138,18 @@ func (f *fakeSource) makeStatus() Status {
 	return *exampleNewlines
 }
 
-func (f *fakeSource) Open() (<-chan Status, <-chan error) {
+func (f *fakeSource) Open(ctx context.Context) (<-chan Status, <-chan error) {
 	f.toots = make(chan Status)
 	f.errs = make(chan error)
 	go func() {
-		for {
+		tick := time.NewTicker(2 * time.Second)
+		defer tick.Stop()
+		for range tick.C {
+			if ctx.Err() != nil {
+				close(f.toots)
+				close(f.errs)
+				return
+			}
 			if f.toots == nil {
 				return
 			}
@@ -108,13 +159,4 @@ func (f *fakeSource) Open() (<-chan Status, <-chan error) {
 	}()
 
 	return f.toots, f.errs
-}
-
-func (f *fakeSource) Close() error {
-	// TODO: (willgorman) impl
-	close(f.toots)
-	f.toots = nil
-	close(f.errs)
-	f.errs = nil
-	return nil
 }
