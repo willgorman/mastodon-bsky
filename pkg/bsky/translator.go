@@ -2,7 +2,6 @@ package bsky
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -46,12 +45,11 @@ func Convert(toot *mastodon.Status) (*Post, error) {
 		Facets:    getLinkFacets(tootText),
 		Text:      tootText,
 	}
-	// TODO: (willgorman) in order to take a mastodon image to an embedded bluesky
+	// in order to take a mastodon image to an embedded bluesky
 	// image we have to first upload the image data and get back a ref link
 	// to include in the FeedPost: https://atproto.com/blog/create-post#images-embeds
-	if len(toot.MediaAttachments) > 0 {
-		return nil, errors.New("images not handled yet")
-	}
+	// so we'll fetch the image from the source url here and pass the data along
+	// for the bluesky client to upload and attach the link to the EmbedImages_Image
 	for _, attachment := range toot.MediaAttachments {
 		if attachment.Type != "image" {
 			continue
