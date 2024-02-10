@@ -14,12 +14,12 @@ const create string = `
 	CREATE TABLE IF NOT EXISTS sync_record (
 		source_post_id TEXT PRIMARY KEY,
 		source_post_url TEXT,
-
 		target_post_id TEXT,
-		target_post_url TEXT
-
+		target_post_url TEXT,
 		added_at DATETIME NOT NULL,
 		synced_at DATETIME NULL,
+		attempts INT DEFAULT 0 NOT NULL,
+		last_error TEXT DEFAULT "" NOT NULL
 	);
 `
 
@@ -30,6 +30,8 @@ type SyncRecord struct {
 	SourcePostURL string       `db:"source_post_url"`
 	TargetPostID  string       `db:"target_post_id"`
 	TargetPostURL string       `db:"target_post_url"`
+	Attempts      int          `db:"attempts"`
+	LastError     string       `db:"last_error"`
 }
 
 func CreateDatastore(path string) (*Datastore, error) {
@@ -66,8 +68,11 @@ func (d *Datastore) ListRecords(ctx context.Context) ([]SyncRecord, error) {
 	return records, nil
 }
 
-func (d *Datastore) GetRecord(ctx context.Context) (*SyncRecord, error) {
-	return nil, nil
+func (d *Datastore) GetRecord(ctx context.Context, sourcePostID string) (*SyncRecord, error) {
+	record := SyncRecord{}
+	err := d.db.GetContext(ctx, &record,
+		`SELECT * FROM sync_record WHERE source_post_id = ?`, sourcePostID)
+	return &record, err
 }
 
 func (d *Datastore) CreateRecord(ctx context.Context, record SyncRecord) error {
@@ -75,12 +80,19 @@ func (d *Datastore) CreateRecord(ctx context.Context, record SyncRecord) error {
 		record.AddedAt = time.Now().UTC()
 	}
 	_, err := d.db.NamedExecContext(ctx,
-		`INSERT INTO sync_record (added_at, synced_at, source_post_id, source_post_url, target_post_id, target_post_url)
-			VALUES (:added_at, :synced_at, :source_post_id, :source_post_url, :target_post_id, :target_post_url)
+		`INSERT INTO sync_record (added_at, synced_at, source_post_id, source_post_url, target_post_id, target_post_url, attempts)
+			VALUES (:added_at, :synced_at, :source_post_id, :source_post_url, :target_post_id, :target_post_url, 0)
 		`, &record)
 	return err
 }
 
 func (d *Datastore) UpdateRecord(ctx context.Context, record SyncRecord) error {
-	return nil
+	_, err := d.db.NamedExecContext(ctx,
+		`UPDATE sync_record 
+			SET synced_at = CURRENT_TIMESTAMP, 
+					target_post_id = :target_post_id, 
+					target_post_url = :target_post_url,
+					last_error = :last_error,
+					attempts = attempts+1`, &record)
+	return err
 }

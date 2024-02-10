@@ -34,6 +34,22 @@ func TestRecords(t *testing.T) {
 	records, err := ds.ListRecords(context.Background())
 	assert.NilError(t, err)
 	litter.Dump(records)
+
+	record, err := ds.GetRecord(context.Background(), "a")
+	assert.NilError(t, err)
+	litter.Dump(record)
+
+	record.LastError = "oh no"
+	err = ds.UpdateRecord(context.Background(), *record)
+	assert.NilError(t, err)
+	litter.Dump(ds.GetRecord(context.Background(), "a"))
+
+	record.LastError = ""
+	record.TargetPostID = "c"
+	record.TargetPostURL = "http://example.com"
+	err = ds.UpdateRecord(context.Background(), *record)
+	assert.NilError(t, err)
+	litter.Dump(ds.GetRecord(context.Background(), "a"))
 }
 
 func init() {
